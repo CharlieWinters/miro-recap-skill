@@ -1,0 +1,8 @@
+node_modules/
+out/
+capture/dist/
+capture/out/
+capture/media/
+assets/*
+!assets/fetch.example.sh
+.DS_Store

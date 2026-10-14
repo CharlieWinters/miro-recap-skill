@@ -1,0 +1,422 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tokyo Hypercar Promo: how it was made</title>
+<style>
+  :root {
+    --claude: #d97757;
+    --ink: #1a1b1f;
+    --muted: #6b6f78;
+    --canvas: #f2f3f5;
+    --mono: "SF Mono", Menlo, Monaco, monospace;
+    --sans: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b0d12; font-family: var(--sans); }
+  .layer { position: absolute; inset: 0; }
+
+  /* Full-screen footage (cold open, finale) */
+  .full img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.65)); }
+  .bars::before, .bars::after { content: ""; position: absolute; left: 0; right: 0; height: 90px; background: #000; }
+  .bars::before { top: 0; } .bars::after { bottom: 0; }
+
+  .title { position: absolute; left: 0; right: 0; text-align: center; color: #fff; letter-spacing: .02em; }
+  .kicker { font: 600 26px var(--sans); letter-spacing: .35em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+  .big { font: 800 120px/1 var(--sans); letter-spacing: -.02em; }
+  .sub { font: 500 34px var(--sans); color: rgba(255,255,255,.8); }
+  .accent { color: var(--claude); }
+
+  /* Miro-style board */
+  #board { background-color: var(--canvas); background-image: radial-gradient(#c9ccd3 1.4px, transparent 1.6px); background-size: 28px 28px; overflow: hidden; }
+  #world { position: absolute; left: 0; top: 0; width: 4200px; height: 2600px; transform-origin: 0 0; }
+  .chip { position: absolute; left: 28px; top: 24px; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); font: 600 22px var(--sans); color: var(--ink); }
+  .chip .logo { width: 34px; height: 34px; border-radius: 8px; background: #ffd02f; display: grid; place-items: center; font: 800 18px var(--sans); color: #050038; }
+  .chip .dim { color: var(--muted); font-weight: 500; }
+
+  .card { position: absolute; background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(16,24,40,.12), 0 1px 3px rgba(16,24,40,.08); overflow: hidden; }
+  .card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .card.contain img { object-fit: contain; background: #fff; }
+  .embedbar { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px; font: 600 16px var(--sans); color: var(--ink); border-bottom: 1px solid #eceef2; background: #fafbfc; }
+  .embedbar .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--claude); }
+  .embedbar .r { margin-left: auto; color: var(--muted); font-weight: 500; }
+  .embedbody { position: absolute; top: 40px; left: 0; right: 0; bottom: 0; }
+  .cap { position: absolute; font: 500 17px var(--sans); color: var(--muted); white-space: nowrap; }
+  .cap b { color: var(--ink); font-weight: 700; margin-right: 8px; }
+  .playbar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(0,0,0,.08); }
+  .playbar i { display: block; height: 100%; width: 0; background: var(--claude); }
+
+  /* Side-by-side comparison */
+  .sbs-title { position: absolute; left: 60px; top: 110px; font: 800 44px var(--sans); color: var(--ink); }
+  .sbs-title span { color: var(--muted); font-weight: 600; font-size: 30px; margin-left: 14px; }
+  .pill { position: absolute; z-index: 3; left: 14px; top: 54px; padding: 6px 12px; border-radius: 999px; font: 700 15px var(--sans); letter-spacing: .06em; text-transform: uppercase; }
+  .pill.grey { background: rgba(30,32,38,.82); color: #fff; }
+  .pill.ai { background: var(--claude); color: #fff; }
+  .flash { position: absolute; z-index: 4; right: 16px; top: 54px; padding: 6px 14px; border-radius: 8px; background: #111; color: #fff; font: 800 18px var(--sans); letter-spacing: .1em; opacity: 0; }
+
+  .gauge { position: absolute; z-index: 4; right: 22px; bottom: 22px; width: 210px; height: 120px; background: rgba(10,12,16,.72); border-radius: 14px; color: #fff; text-align: center; padding-top: 14px; }
+  .gauge .v { font: 800 54px/1 var(--sans); }
+  .gauge .u { font: 600 16px var(--sans); color: rgba(255,255,255,.7); letter-spacing: .12em; }
+  .gauge .bar { position: absolute; left: 18px; right: 18px; bottom: 16px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); }
+  .gauge .bar i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--claude); }
+
+  /* Claude Code terminal */
+  #term { position: absolute; left: 160px; right: 160px; bottom: 34px; height: 196px; z-index: 20; border-radius: 16px; background: #15161a; box-shadow: 0 20px 60px rgba(0,0,0,.45); border: 1px solid #2a2c33; overflow: hidden; }
+  #term .hd { height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: #1d1f24; font: 500 15px var(--mono); color: #8a8f99; }
+  #term .hd .b { width: 12px; height: 12px; border-radius: 50%; }
+  #term .hd .name { margin-left: 14px; }
+  #term .hd .count { margin-left: auto; color: #6c717b; }
+  #term .bd { padding: 18px 28px; font: 500 30px/1.45 var(--mono); color: #eceef2; white-space: pre-wrap; }
+  #term .gt { color: var(--claude); font-weight: 700; margin-right: 14px; }
+  #caret { display: inline-block; width: 15px; height: 34px; margin-left: 3px; vertical-align: -6px; background: var(--claude); }
+
+  /* End card */
+  #end { background: #0b0d12; }
+  .stats { position: absolute; left: 0; right: 0; top: 560px; display: flex; justify-content: center; gap: 70px; color: #fff; }
+  .stat { text-align: center; }
+  .stat .n { font: 800 72px/1 var(--sans); }
+  .stat .l { font: 600 22px var(--sans); color: rgba(255,255,255,.65); letter-spacing: .15em; text-transform: uppercase; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Cold open: the finished promo -->
+<div id="open" class="layer full bars">
+  <img class="seq" data-dir="promoHD" data-count="457" data-from="334" data-start="0">
+  <div class="vignette" style="background:radial-gradient(ellipse at center, rgba(0,0,0,.55) 20%, rgba(0,0,0,.8))"></div>
+  <div class="title" style="top:430px">
+    <div class="kicker" id="openKicker">Tokyo Hypercar Promo</div>
+    <div class="big" id="openBig" style="margin-top:18px">Made in one Miro board</div>
+  </div>
+</div>
+
+<!-- Title card -->
+<div id="titlecard" class="layer" style="background:#0b0d12">
+  <div class="title" style="top:380px">
+    <div class="kicker">How it was made</div>
+    <div class="big" style="margin-top:22px">Prompt <span class="accent">→</span> board <span class="accent">→</span> film</div>
+    <div class="sub" style="margin-top:30px">Claude Code · fal · Miro Packs</div>
+  </div>
+</div>
+
+<!-- The Miro board (first run) -->
+<div id="board" class="layer">
+  <div class="chip"><div class="logo">M</div>Tokyo Hypercar Promo <span class="dim">· Miro board</span></div>
+  <div id="toast" style="position:absolute;left:50%;top:330px;transform:translateX(-50%);z-index:6;padding:18px 30px;background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.1);font:600 30px var(--sans);color:var(--ink)">✓ New board created <span style="color:var(--muted);font-weight:500">· Tokyo Hypercar Promo</span></div>
+  <div id="world">
+    <div id="hero" class="card" style="left:220px;top:250px;width:760px;height:427px"><img src="/assets/img/hero.web.jpg"></div>
+    <div class="cap" id="heroCap" style="left:220px;top:690px"><b>CAR_Hypercar_HERO</b>nano-banana-pro · concept</div>
+
+    <div id="v1" class="card contain view" style="left:220px;top:790px;width:300px;height:225px"><img src="/assets/img/front.web.jpg"></div>
+    <div id="v2" class="card contain view" style="left:540px;top:790px;width:300px;height:225px"><img src="/assets/img/back.web.jpg"></div>
+    <div id="v3" class="card contain view" style="left:860px;top:790px;width:300px;height:225px"><img src="/assets/img/left.web.jpg"></div>
+    <div id="v4" class="card contain view" style="left:1180px;top:790px;width:300px;height:225px"><img src="/assets/img/right.web.jpg"></div>
+    <div class="cap" id="viewsCap" style="left:220px;top:1028px"><b>FRONT · BACK · LEFT · RIGHT</b>views for image-to-3D</div>
+
+    <div id="model" class="card" style="left:1080px;top:250px;width:720px;height:480px;background:linear-gradient(#ffffff,#eef0f4)">
+      <div class="embedbar"><span class="dot"></span>Miro Packs · 3D viewer<span class="r">orbit · zoom</span></div>
+      <div class="embedbody"><img class="seq" data-dir="turn" data-ext="png" data-count="72" data-start="14.61" data-loop="1" style="object-fit:contain;background:transparent"></div>
+    </div>
+    <div class="cap" id="modelCap" style="left:1080px;top:743px"><b>MODEL_Hypercar</b>Hunyuan 3D Pro · 4 views → GLB</div>
+
+    <div id="previz" class="card" style="left:1900px;top:250px;width:860px;height:524px">
+      <div class="embedbar"><span class="dot"></span>Miro Packs · previz shot<span class="r">Play · Edit · Render · Approve</span></div>
+      <div class="embedbody"><img class="seq" data-dir="s1g" data-count="144" data-start="16.9"><div class="playbar"><i id="previzBar"></i></div></div>
+    </div>
+    <div class="cap" id="previzCap" style="left:1900px;top:787px"><b>S1_HERO</b>grey-clay greybox · Tokyo street, 3D car, low push-in</div>
+  </div>
+</div>
+
+<!-- Side-by-side scenes (built on the same canvas look) -->
+<div id="sbs" class="layer" style="background-color:var(--canvas);background-image:radial-gradient(#c9ccd3 1.4px, transparent 1.6px);background-size:28px 28px">
+  <div class="chip"><div class="logo">M</div>Tokyo Hypercar Promo <span class="dim">· Miro board</span></div>
+  <div class="sbs-title" id="sbsTitle">Scene 1 <span>hero push-in</span></div>
+  <div id="leftCard" class="card" style="left:60px;top:190px;width:880px;height:535px">
+    <div class="embedbar"><span class="dot" style="background:#9aa0aa"></span><span id="leftName">PREVIZ_S1_HERO_BLOCK</span><span class="r">previz pack</span></div>
+    <div class="embedbody"><div class="pill grey">Previz · grey clay · free</div><img id="leftImg"><div class="playbar"><i id="leftBar"></i></div></div>
+  </div>
+  <div id="rightCard" class="card" style="left:980px;top:190px;width:880px;height:535px">
+    <div class="embedbar"><span class="dot"></span><span id="rightName">S1_KEY</span><span class="r" id="rightModel">nano-banana-pro</span></div>
+    <div class="embedbody"><div class="pill ai">AI output</div><div class="flash" id="cutFlash">CUT</div><img id="rightImg"><div class="playbar"><i id="rightBar"></i></div>
+      <div class="gauge" id="gauge" style="opacity:0"><div class="v" id="kmh">0</div><div class="u">KM/H</div><div class="bar"><i id="kmhBar"></i></div></div>
+    </div>
+  </div>
+  <div id="bakeoff" style="position:absolute;left:60px;top:190px;width:1800px;height:560px;opacity:0">
+    <div class="card" id="bA" style="left:0;top:40px;width:580px;height:326px"><img src="/assets/img/key_a.web.jpg"></div>
+    <div class="card" id="bB" style="left:610px;top:40px;width:580px;height:326px"><img src="/assets/img/key_b.web.jpg"></div>
+    <div class="card" id="bC" style="left:1220px;top:40px;width:580px;height:326px"><img src="/assets/img/key_c.web.jpg"></div>
+    <div class="cap" style="left:0;top:382px"><b>A</b>nano-banana-pro · real-photo prompt</div>
+    <div class="cap" style="left:610px;top:382px"><b>B</b>FLUX.2 Pro</div>
+    <div class="cap" style="left:1220px;top:382px"><b>C</b>Seedream 4.5</div>
+    <div id="pickA" style="position:absolute;left:-8px;top:32px;width:596px;height:342px;border:6px solid var(--claude);border-radius:16px;opacity:0"></div>
+    <div id="pickTag" class="pill ai" style="left:18px;top:56px;opacity:0">Picked</div>
+  </div>
+</div>
+
+<!-- Hands-on: the real pack tools, captured from the actual embeds (capture/) -->
+<div id="tools" class="layer" style="background-color:var(--canvas);background-image:radial-gradient(#c9ccd3 1.4px, transparent 1.6px);background-size:28px 28px">
+  <div class="chip"><div class="logo">M</div>Tokyo Hypercar Promo <span class="dim">· Miro board</span></div>
+  <div id="tShot" class="card tool" style="left:392px;top:92px;width:1136px;height:750px">
+    <div class="embedbar"><span class="dot"></span>Miro Packs · previz shot<span class="r">S1_HERO</span></div>
+    <div class="embedbody"><img class="seq" data-dir="cap_shot" data-count="231" data-start="31.89"></div>
+  </div>
+  <div id="tClip" class="card tool" style="left:445px;top:92px;width:1031px;height:750px">
+    <div class="embedbar"><span class="dot"></span>Miro Packs · clip editor<span class="r">S1_VIDEO</span></div>
+    <div class="embedbody"><img class="seq" data-dir="cap_clip" data-count="137" data-start="41.49" style="object-fit:contain;background:#fff"></div>
+  </div>
+</div>
+
+<!-- Pull back across a wall of every real output on the board -->
+<div id="realboard" class="layer" style="background-color:var(--canvas);background-image:radial-gradient(#c9ccd3 1.4px, transparent 1.6px);background-size:28px 28px;overflow:hidden">
+  <div class="chip"><div class="logo">M</div>Tokyo Hypercar Promo <span class="dim">· Miro board</span></div>
+  <div id="realImg" style="position:absolute;left:0;top:0;width:3000px;height:1300px;transform-origin:0 0"></div>
+  <div class="title" style="top:960px">
+    <div class="sub" id="realSub" style="color:var(--ink);font-weight:800;font-size:40px">Every step lives on the board</div>
+  </div>
+</div>
+
+<!-- Finale: the promo -->
+<div id="finale" class="layer full bars">
+  <img class="seq" data-dir="promoHD" data-count="457" data-from="159" data-start="68.37">
+</div>
+
+<!-- End card -->
+<div id="end" class="layer">
+  <div class="title" style="top:300px">
+    <div class="kicker">Tokyo Hypercar Promo</div>
+    <div class="big" style="margin-top:22px">One board. One conversation.</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">14</div><div class="l">Prompts</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">Scenes</div></div>
+    <div class="stat"><div class="n">~1 hr</div><div class="l">Start to finish</div></div>
+    <div class="stat"><div class="n">≈ $3.25</div><div class="l">Generation</div></div>
+  </div>
+  <div class="title sub" style="top:800px">Claude Code <span class="accent">×</span> fal <span class="accent">×</span> Miro</div>
+</div>
+
+<!-- Claude Code terminal with the user's prompts -->
+<div id="term">
+  <div class="hd"><span class="b" style="background:#ff5f57"></span><span class="b" style="background:#febc2e"></span><span class="b" style="background:#28c840"></span><span class="name">claude · Tokyo Hypercar Promo</span><span class="count" id="count"></span></div>
+  <div class="bd"><span class="gt">&gt;</span><span id="typed"></span><span id="caret"></span></div>
+</div>
+
+<script src="/node_modules/gsap/dist/gsap.min.js"></script>
+<script>
+// ---- timing: everything sits on the hype track's 125 BPM bar grid (bars every 1.92 s from 3.09 s) ----
+const FPS = 24;
+const bar = (n) => +(3.09 + 1.92 * n).toFixed(3);
+const DURATION = 75.36; // 60 s cut + the 8-bar hands-on beat
+
+// The user's own prompts (lightly trimmed), with when they start typing.
+const PROMPTS = [
+  { t: 5.15, cps: 62, text: "I want to generate a sports car with ai, turn it into a 3D model, and then create a promotional shot of it on the streets of tokyo. Can we do this with fal and miro?" },
+  { t: bar(3) + 0.05, cps: 70, text: "Ok let's plan it on Miro with the packs. Do a first run through and I'll give my feedback" },
+  { t: bar(8) + 0.05, cps: 70, text: "Approved. Let's make the style much more realistic, use a different model if you have to." },
+  { t: bar(12) + 0.05, cps: 40, text: "make the 6s video from it" },
+  { t: bar(15) + 0.05, cps: 55, text: "I'm just going to make some quick adjustments to the previz" },
+  { t: bar(20) + 0.05, cps: 55, text: "ok just going to do some manual trimming here" },
+  { t: bar(23) + 0.05, cps: 105, text: "can we do a fast 360 around the car? Then zoom away, then a rapid camera jump to front, to side, then to back? With exhaust coming out the back." },
+  { t: bar(28) + 0.05, cps: 105, text: "from the last frame of S2 can we have the camera stay static and the car speed away. Would the car's suspension dip a little before it took off?" },
+  { t: bar(32) + 0.05, cps: 75, text: "cut all three scenes together into one promo. Let's also think of some music that would be suitable." },
+];
+
+// Per-prompt typing times for the key-click track.
+window.typeEvents = PROMPTS.flatMap((p) =>
+  [...p.text].map((ch, i) => ({ t: +(p.t + i / p.cps).toFixed(3), ch })).filter((e) => e.ch !== ' ')
+);
+
+const $ = (s) => document.querySelector(s);
+const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+
+// ---- layers on/off ----
+const show = (sel, t0, t1) => { tl.set(sel, { autoAlpha: 1 }, t0); if (t1 !== undefined) tl.set(sel, { autoAlpha: 0 }, t1); };
+gsap.set(['#open', '#titlecard', '#board', '#sbs', '#tools', '#realboard', '#finale', '#end', '#term'], { autoAlpha: 0 });
+
+// Cold open (0 – 3.09)
+show('#open', 0, 3.09);
+tl.from('#openKicker', { autoAlpha: 0, y: 20, duration: 0.6 }, 0.5)
+  .from('#openBig', { autoAlpha: 0, scale: 1.12, duration: 0.7 }, 0.9);
+
+// Title card (3.09 – 5.01)
+show('#titlecard', 3.09, bar(1));
+tl.from('#titlecard .title', { autoAlpha: 0, scale: 0.92, duration: 0.5 }, 3.09);
+
+// Terminal: up from 5.0 until the drop at 51.09
+show('#term', 4.95, bar(33));
+tl.from('#term', { y: 260, duration: 0.45 }, 4.95);
+
+// Board (5.01 – bar 8): empty board appears with prompt 1, items arrive with prompt 2
+show('#board', bar(1), bar(8));
+const cam = { x: 0, y: 0, s: 1 };
+const applyCam = () => gsap.set('#world', { x: cam.x, y: cam.y, scale: cam.s });
+const camTo = (t, x, y, s, d = 0.9) => tl.to(cam, { x, y, s, duration: d, ease: 'power2.inOut' }, t);
+tl.set(cam, { x: 200, y: 10, s: 0.82 }, bar(1));
+gsap.set(['#hero', '#heroCap', '.view', '#viewsCap', '#model', '#modelCap', '#previz', '#previzCap'], { autoAlpha: 0 });
+
+const pop = (sel, t, extra = {}) => tl.fromTo(sel, { autoAlpha: 0, scale: 0.82, y: 30 }, { autoAlpha: 1, scale: 1, y: 0, duration: 0.55, ease: 'back.out(1.6)', ...extra }, t);
+tl.fromTo('#toast', { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.4 }, bar(2));
+tl.to('#toast', { autoAlpha: 0, duration: 0.3 }, bar(4) - 0.3);
+pop('#hero', bar(4));
+tl.to('#heroCap', { autoAlpha: 1, duration: 0.3 }, bar(4) + 0.3);
+// Camera stops centre each new item in the area above the terminal (world centre × scale → screen 960, ~420).
+camTo(bar(4) - 0.3, 390, -20, 0.95, 0.6);
+camTo(bar(5) - 0.4, 297, -70, 0.78);
+pop('.view', bar(5), { stagger: 0.12 });
+tl.to('#viewsCap', { autoAlpha: 1, duration: 0.3 }, bar(5) + 0.5);
+camTo(bar(6) - 0.4, -221, 10, 0.82);
+pop('#model', bar(6));
+tl.to('#modelCap', { autoAlpha: 1, duration: 0.3 }, bar(6) + 0.3);
+camTo(bar(7) - 0.45, -951, 0, 0.82);
+pop('#previz', bar(7));
+tl.to('#previzCap', { autoAlpha: 1, duration: 0.3 }, bar(7) + 0.3);
+tl.fromTo('#previzBar', { width: '0%' }, { width: '100%', duration: 6, ease: 'none' }, 16.9);
+
+// ---- side-by-side scenes ----
+show('#sbs', bar(8), bar(15));
+show('#sbs', bar(23), bar(33));
+const sbsState = { scene: 'still' };
+// Which footage is on the left/right at a given time (set in renderAt below).
+const SBS = [
+  // Still comparison: grey frame vs first key frame, then wipe to the realism pick A.
+  { from: bar(8), to: bar(12), left: { still: '/assets/img/s1grey.web.jpg' }, right: { still: '/assets/img/key_a.web.jpg' },
+    title: 'Scene 1 <span>greybox → photoreal key frame</span>', ln: 'PREVIZ_S1_HERO_BLOCK', rn: 'S1_KEY_REAL_A', rm: 'nano-banana-pro · edit' },
+  { from: bar(12), to: bar(23), left: { dir: 's1g', count: 144 }, right: { dir: 's1v', count: 158 }, start: bar(12) + 0.6,
+    title: 'Scene 1 <span>hero push-in</span>', ln: 'S1_HERO · grey clip', rn: 'S1_VIDEO', rm: 'MiniMax H3 Max · 1080P' },
+  { from: bar(23), to: bar(28), left: { dir: 's2g', count: 173 }, right: { dir: 's2v', count: 175 }, start: bar(24),
+    title: 'Scene 2 <span>360° orbit → pull back → hard cuts</span>', ln: 'S2_ORBIT · grey clip', rn: 'S2_VIDEO', rm: 'MiniMax H3 Max · 1080P' },
+  { from: bar(28), to: bar(33), left: { dir: 's3g', count: 120 }, right: { dir: 's3v', count: 124 }, start: bar(29),
+    title: 'Scene 3 <span>locked-off launch · 0–100 in ~2 s</span>', ln: 'S3_LAUNCH · grey clip', rn: 'S3_VIDEO', rm: 'MiniMax H3 Max · 1080P' },
+];
+// Realism bake-off between the still comparison and scene 1 video
+tl.fromTo('#leftCard', { autoAlpha: 0, x: -60 }, { autoAlpha: 1, x: 0, duration: 0.5 }, bar(9));
+tl.fromTo('#rightCard', { autoAlpha: 0, x: 60 }, { autoAlpha: 1, x: 0, duration: 0.5 }, bar(9) + 0.12);
+tl.to(['#leftCard', '#rightCard'], { autoAlpha: 0, duration: 0.25 }, bar(10) + 0.9);
+tl.to('#bakeoff', { autoAlpha: 1, duration: 0.3 }, bar(10) + 1.0);
+tl.from(['#bA', '#bB', '#bC'], { autoAlpha: 0, y: 40, duration: 0.45, stagger: 0.15, ease: 'back.out(1.5)' }, bar(10) + 1.0);
+tl.to(['#bB', '#bC'], { opacity: 0.35, duration: 0.3 }, bar(11) + 0.2);
+tl.to(['#pickA', '#pickTag'], { opacity: 1, duration: 0.25 }, bar(11) + 0.2);
+tl.to('#bakeoff', { autoAlpha: 0, duration: 0.25 }, bar(12));
+tl.to(['#leftCard', '#rightCard'], { autoAlpha: 1, duration: 0.3 }, bar(12) + 0.1);
+// Cards bump on each scene change
+[bar(23), bar(28)].forEach((t) => tl.fromTo(['#leftCard', '#rightCard'], { scale: 0.96 }, { scale: 1, duration: 0.4, ease: 'back.out(2)' }, t));
+// Scene 2 cut flashes (cuts at 4.7, 5.5, 6.3 s into the clip)
+[4.7, 5.5, 6.3].forEach((c, i) => {
+  const t = bar(24) + c;
+  tl.set('#cutFlash', { textContent: ['CUT · FRONT', 'CUT · SIDE', 'CUT · BACK'][i], opacity: 1 }, t).set('#cutFlash', { opacity: 0 }, t + 0.55);
+});
+// Scene 3 speed gauge
+tl.to('#gauge', { opacity: 1, duration: 0.3 }, bar(29));
+tl.to('#gauge', { opacity: 0, duration: 0.3 }, bar(33) - 0.3);
+
+// ---- hands-on beat (bars 15-23): the real previz, framing and clip tools, captured from their embeds ----
+show('#tools', bar(15), bar(23));
+gsap.set('.tool', { autoAlpha: 0 });
+const TOOL_BEATS = [
+  ['#tShot', bar(15), bar(20), 'Previz: re-angle the camera, widen the lens, render, approve'],
+  ['#tClip', bar(20), bar(23), 'Clip editor: trim the in and out, retime to 1.5x'],
+];
+TOOL_BEATS.forEach(([sel, t0, t1, title]) => {
+  tl.fromTo(sel, { autoAlpha: 0, scale: 0.94, y: 30 }, { autoAlpha: 1, scale: 1, y: 0, duration: 0.45, ease: 'back.out(1.5)', immediateRender: false }, t0);
+  tl.to(sel, { autoAlpha: 0, scale: 0.97, duration: 0.2 }, t1 - 0.2);
+});
+
+// Pull back to the real board at the drop
+show('#realboard', bar(33), bar(34));
+// The wall: every real output in board order, three rows of five 16:9 cards (3000 x 1300 world).
+const WALL = [
+  ['/assets/img/hero.web.jpg', 'CAR_Hypercar_HERO'], ['/assets/img/front.web.jpg', 'FRONT'], ['/assets/img/back.web.jpg', 'BACK'],
+  ['/assets/img/left.web.jpg', 'LEFT'], ['/assets/frames/turn/0010.png', 'MODEL_Hypercar'],
+  ['/assets/img/s1grey.web.jpg', 'PREVIZ_S1_HERO_BLOCK'], ['/assets/img/key_v1.web.jpg', 'S1_KEY'], ['/assets/img/key_a.web.jpg', 'S1_KEY_REAL_A'],
+  ['/assets/img/key_b.web.jpg', 'S1_KEY_REAL_B'], ['/assets/img/key_c.web.jpg', 'S1_KEY_REAL_C'],
+  ['/assets/frames/s2g/0120.jpg', 'S2_ORBIT'], ['/assets/frames/s2v/0120.jpg', 'S2_VIDEO'], ['/assets/frames/s3g/0030.jpg', 'S3_LAUNCH'],
+  ['/assets/frames/s3v/0070.jpg', 'S3_VIDEO'], ['/assets/frames/promoHD/0300.jpg', 'PROMO_FINAL'],
+];
+WALL.forEach(([src, name], i) => {
+  const x = 60 + (i % 5) * 590, y = 60 + Math.floor(i / 5) * 410;
+  $('#realImg').insertAdjacentHTML('beforeend',
+    `<div class="card${src.endsWith('.png') ? ' contain' : ''}" style="left:${x}px;top:${y}px;width:540px;height:304px"><img src="${src}"></div>` +
+    `<div class="cap" style="left:${x}px;top:${y + 314}px"><b>${name}</b></div>`);
+});
+// Start tight on the concept card, end with the whole wall in frame.
+const rb = { x: -60, y: -40, s: 2.4 };
+const applyRb = () => gsap.set('#realImg', { x: rb.x, y: rb.y, scale: rb.s });
+tl.to(rb, { x: 30, y: 95, s: 0.62, duration: 1.85, ease: 'expo.out' }, bar(33));
+tl.from('#realSub', { autoAlpha: 0, y: 20, duration: 0.4 }, bar(33) + 0.5);
+
+// Finale: the promo, then the end card
+show('#finale', bar(34), bar(37));
+show('#end', bar(37));
+tl.from('#end .title, #end .stat', { autoAlpha: 0, y: 24, duration: 0.45, stagger: 0.06 }, bar(37));
+tl.to({}, { duration: 0.01 }, DURATION);
+
+// ---- per-frame state: image sequences, typing, comparison footage ----
+const seqUrl = (dir, n, ext = 'jpg') => `/assets/frames/${dir}/${String(n).padStart(4, '0')}.${ext}`;
+const clampI = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function setSrc(img, url) {
+  if (img.getAttribute('src') === url) return null;
+  img.src = url;
+  return img.decode().catch(() => {});
+}
+
+function seqFrames(t, pending) {
+  document.querySelectorAll('img.seq').forEach((img) => {
+    const d = img.dataset, count = +d.count, from = +(d.from || 1);
+    let i = Math.floor((t - +d.start) * FPS);
+    i = d.loop ? ((i % count) + count) % count : clampI(i, 0, count - from);
+    const p = setSrc(img, seqUrl(d.dir, from + i, d.ext));
+    if (p) pending.push(p);
+  });
+}
+
+function sbsFrames(t, pending) {
+  const s = SBS.find((x) => t >= x.from && t < x.to) || (t < SBS[0].from ? SBS[0] : SBS[SBS.length - 1]);
+  $('#sbsTitle').innerHTML = s.title;
+  $('#leftName').textContent = s.ln; $('#rightName').textContent = s.rn; $('#rightModel').textContent = s.rm;
+  const side = (img, src, barEl) => {
+    if (src.still) { const p = setSrc(img, src.still); if (p) pending.push(p); barEl.style.width = '0%'; return; }
+    const i = clampI(Math.floor((t - s.start) * FPS), 0, src.count - 1);
+    const p = setSrc(img, seqUrl(src.dir, i + 1)); if (p) pending.push(p);
+    barEl.style.width = `${(100 * i) / (src.count - 1)}%`;
+  };
+  side($('#leftImg'), s.left, $('#leftBar'));
+  side($('#rightImg'), s.right, $('#rightBar'));
+  // Scene 3: speed from the same launch physics as the greybox (launch 1.2 s in; 14 m/s² then 10 m/s² after 2.3 s)
+  if (s.left.dir === 's3g') {
+    const tc = Math.max(0, t - s.start - 1.2);
+    const v = tc < 2.3 ? 14 * tc : 14 * 2.3 + 10 * (tc - 2.3);
+    const kmh = Math.min(170, Math.round(v * 3.6));
+    $('#kmh').textContent = kmh;
+    $('#kmhBar').style.width = `${(kmh / 170) * 100}%`;
+  }
+}
+
+function typing(t) {
+  let idx = -1;
+  PROMPTS.forEach((p, i) => { if (t >= p.t - 0.05) idx = i; });
+  const p = PROMPTS[Math.max(0, idx)];
+  const n = idx < 0 ? 0 : clampI(Math.floor((t - p.t) * p.cps), 0, p.text.length);
+  $('#typed').textContent = p.text.slice(0, n);
+  $('#count').textContent = idx < 0 ? '' : `prompt ${idx + 1} / ${PROMPTS.length}`;
+  const typingNow = idx >= 0 && n < p.text.length;
+  $('#caret').style.opacity = typingNow || Math.floor(t * 2) % 2 === 0 ? 1 : 0;
+}
+
+window.renderAt = async (t) => {
+  tl.seek(t, false);
+  applyCam();
+  applyRb();
+  const pending = [];
+  seqFrames(t, pending);
+  sbsFrames(t, pending);
+  typing(t);
+  await Promise.all(pending);
+  return true;
+};
+window.DURATION = DURATION;
+window.ready = true;
+</script>
+</body>
+</html>

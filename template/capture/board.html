@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>capture board</title>
+  <!--
+    A stand-in for miro.com's board page, made for screen capture: the same window.e2e API as the miro-packs e2e
+    board (bridges + embeds as sibling iframes on a different origin from the app), but one embed fills the viewport,
+    the bridge and store frames sit off-screen, and a drawn cursor shows where the script is pointing.
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #f2f3f5; }
+    #bridges, #store { position: absolute; left: -2000px; top: 0; }
+    #bridges iframe { width: 200px; height: 40px; }
+    #embeds iframe { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; border: 0; }
+    #cursor { position: absolute; left: 0; top: 0; width: 28px; height: 28px; z-index: 10; pointer-events: none; transform: translate(-3px, -2px); }
+    #ring { position: absolute; z-index: 9; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 3px solid #d97757; opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div id="bridges"></div>
+  <div id="embeds"></div>
+  <div id="ring"></div>
+  <svg id="cursor" viewBox="0 0 28 28"><path d="M3 2 L3 22 L8.5 17 L12.5 26 L16 24.5 L12 15.8 L19.5 15.8 Z" fill="#111" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+  <script>
+    const APP = new URLSearchParams(location.search).get('app');
+    let n = 0;
+    const loaded = (f) => new Promise((r) => f.addEventListener('load', () => r(), { once: true }));
+    window.e2e = {
+      async addStore() {
+        const f = document.createElement('iframe');
+        f.id = 'store';
+        f.name = 'store';
+        f.src = `${APP}/__e2e/store.html`;
+        const p = loaded(f);
+        document.body.append(f);
+        await p;
+      },
+      addBridge() {
+        const label = `B${++n}`;
+        const f = document.createElement('iframe');
+        f.name = `bridge-${label}`;
+        f.src = `${APP}/index.html?e2e=${label}`;
+        document.getElementById('bridges').append(f);
+        return label;
+      },
+      addEmbed(label, url) {
+        const f = document.createElement('iframe');
+        f.name = `embed-${label}`;
+        f.src = url;
+        document.getElementById('embeds').append(f);
+        return label;
+      },
+    };
+    const cur = document.getElementById('cursor');
+    const ring = document.getElementById('ring');
+    window.cursor = {
+      at(x, y) { cur.style.left = `${x}px`; cur.style.top = `${y}px`; },
+      pulse(x, y) {
+        ring.style.left = `${x}px`; ring.style.top = `${y}px`;
+        ring.animate([{ opacity: 0.9, transform: 'scale(.5)' }, { opacity: 0, transform: 'scale(1.4)' }], { duration: 420, easing: 'ease-out' });
+      },
+      hide() { cur.style.display = 'none'; },
+    };
+  </script>
+</body>
+</html>

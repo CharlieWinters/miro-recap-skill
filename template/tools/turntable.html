@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html, body { margin: 0; background: transparent; } canvas { display: block; }</style>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+// Turntable of MODEL_Hypercar for the making-of video. window.renderTurn(frac) draws one angle (0..1 = one turn).
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const W = 960, H = 640;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.2));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(3, 5, 4);
+scene.add(key);
+
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.01, 100);
+const pivot = new THREE.Group();
+scene.add(pivot);
+
+const gltf = await new GLTFLoader().loadAsync('/assets/car.glb');
+const car = gltf.scene;
+const box = new THREE.Box3().setFromObject(car);
+const size = box.getSize(new THREE.Vector3());
+const center = box.getCenter(new THREE.Vector3());
+car.position.sub(center);
+car.position.y += size.y / 2;
+pivot.add(car);
+
+const r = Math.max(size.x, size.z) * 1.55;
+camera.position.set(0, size.y * 1.1 + r * 0.32, r);
+camera.lookAt(0, size.y * 0.45, 0);
+
+const shadow = new THREE.Mesh(
+  new THREE.CircleGeometry(Math.max(size.x, size.z) * 0.62, 64),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18 })
+);
+shadow.rotation.x = -Math.PI / 2;
+shadow.scale.set(0.55, 1, 1);
+scene.add(shadow);
+
+window.renderTurn = (frac) => {
+  pivot.rotation.y = -Math.PI / 5 + frac * Math.PI * 2;
+  shadow.rotation.z = pivot.rotation.y;
+  renderer.render(scene, camera);
+};
+window.renderTurn(0);
+window.ready = true;
+</script>
+</body>
+</html>
