@@ -73,6 +73,7 @@ cp -R ~/.claude/skills/miro-recap/template <project> && cd <project> && npm inst
 
 - **Compose to the beat plan:** ElevenLabs `elevenlabs/music/v2.5` on fal, with a composition plan whose chunks match the bars, including a drop chunk on the pull-back bar. Price it first (about $0.60 per minute).
 - **Fit it:** `python3 tools/fit_music.py in.mp3 out.wav <drop_s> <groove_from_s> <end_s>`. This shifts the beats onto the grid and splices the drop when the cue faded it, which happens about half the time.
+- **A quiet outro on purpose** (for example, the finished clip's own dialogue under the finale): run the fit with `NO_SPLICE=1`, or it will splice groove over the quiet tail. Mix the finale's own audio in after `build.sh` with `adelay` plus `amix`, and check it with a transcript.
 - **Soundtrack options:** to offer choices, remux the finished video with each fitted track (`-c:v copy`, no re-render). Place them side by side on the board, with the original track as one of them.
 
 ## 5. Real editing tools (optional, see `reference/tool-capture.md`)

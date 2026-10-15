@@ -48,7 +48,8 @@ audio = np.vstack([np.zeros((int(shift * SR), 2), np.float32), audio])
 
 groove = rms_db(audio, GROOVE_FROM, DROP - 4)
 tail = rms_db(audio, DROP + 1, END - 1)
-spliced = tail < groove - 3
+import os
+spliced = tail < groove - 3 and not os.environ.get("NO_SPLICE")  # NO_SPLICE=1 when the post-drop quiet is intended
 if spliced:
     seg = audio[int(GROOVE_FROM * SR) : int((GROOVE_FROM + END - DROP + 0.1) * SR)]
     cut = int(DROP * SR)
