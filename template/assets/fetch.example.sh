@@ -14,11 +14,11 @@ g car.glb https://v3b.fal.media/files/b/0aae3f3e/o0tLkpx-Efm3qT5FP4sRX_model.glb
 g vid/s1g.mp4 https://miro-packs.seanwinters.app/m/2026-10/QPgjoXq6llcXz_FeVdaNIA.mp4
 g vid/s2g.mp4 https://miro-packs.seanwinters.app/m/2026-10/FeQ2VVZJgK4kFGm7msx7FQ.mp4
 g vid/s3g.mp4 https://miro-packs.seanwinters.app/m/2026-10/unEKemiexCIKTJtpN4FftA.mp4
-cp ~/.claude/jobs/2ff2ed90/tmp/vid/v.mp4 vid/s1v.mp4
-cp ~/.claude/jobs/2ff2ed90/tmp/s2/v2.mp4 vid/s2v.mp4
-cp ~/.claude/jobs/2ff2ed90/tmp/s3/v3.mp4 vid/s3v.mp4
-cp ~/Movies/TokyoHypercarPromo/promo_final.mp4 vid/promo.mp4
-cp ~/.claude/jobs/2ff2ed90/tmp/svgin/board.svg board.svg
+cp /path/to/your/vid/s1v.mp4 vid/s1v.mp4   # local AI clip
+cp /path/to/your/vid/s2v.mp4 vid/s2v.mp4   # local AI clip
+cp /path/to/your/vid/s3v.mp4 vid/s3v.mp4   # local AI clip
+cp /path/to/final.mp4 vid/promo.mp4   # finished piece
+cp /path/to/board.svg board.svg   # canvas_read_as_svg export
 for v in s1g s2g s3g s1v s2v s3v promo; do mkdir -p frames/$v; ffmpeg -v error -y -i vid/$v.mp4 -vf "fps=24,scale=960:-2" -q:v 3 frames/$v/%04d.jpg; echo "$v $(ls frames/$v | wc -l) frames"; done
 for f in img/*.png img/*.jpg; do sips -Z 1600 -s format jpeg -s formatOptions 85 "$f" --out "${f%.*}.web.jpg" >/dev/null; done
 ls img
