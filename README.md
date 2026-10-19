@@ -4,6 +4,18 @@ A [Claude Code](https://claude.com/claude-code) skill that makes short "how it w
 
 The film is told through the user's own prompts. Each prompt types out in a Claude Code-style terminal at the bottom of the frame, and the board's real outputs build on a Miro-style canvas above it. Previz (greybox) and AI output play side by side, and the film ends on the finished piece and an end card. There's no voiceover and no headline text: the prompts carry the story.
 
+## Examples
+
+Click a poster to play the film. Both were made with this skill.
+
+| [![Tokyo Hypercar Promo recap](docs/tokyo-hypercar-recap.jpg)](https://github.com/CharlieWinters/miro-recap-skill/releases/download/examples/tokyo-hypercar-recap.mp4) | [![Truck Swap recap](docs/truck-swap-recap.jpg)](https://github.com/CharlieWinters/miro-recap-skill/releases/download/examples/truck-swap-recap.mp4) |
+| --- | --- |
+| **Tokyo Hypercar Promo** (75 s): a three-scene promo with concept art, a 3D model, greybox previz, AI video and real editing-tool captures. 14 prompts. | **Truck Swap** (65 s): putting someone into a meme clip through segmentation, depth, generation and speaker separation. 7 prompts. |
+
+Both films are also on the [examples release](https://github.com/CharlieWinters/miro-recap-skill/releases/tag/examples).
+
+## How it's built
+
 It's code-built, not edited in a timeline:
 
 - **HTML + GSAP:** the whole film is one paused GSAP timeline, and `window.renderAt(t)` draws any moment exactly.
